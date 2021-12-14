@@ -221,17 +221,22 @@ class CascadeFailure:
             self.create_image(save=True, filepath=f"{filepath}/{self}_attack#{attack_number}_{removal_mode}_n#{n}_", show=False)
 
 
-
+import json
 if __name__ == "__main__":
     
     for i in range(100):
         start=time.perf_counter()
         print(f"iteration: {i}")
         bs = BetweennessStrategy(k=None, normalized=True, weight="travel_time")
-        cf = CascadeFailure("data/cleaned_manhattan.gml", "data/uncleaned_manhattan.graphml",strategy=bs,multiplier=1.5)
+        cf = CascadeFailure("data/cleaned_manhattan.gml", "data/uncleaned_manhattan.graphml",strategy=bs,multiplier=4)
         cf.attack_nodes(1, removal_mode="random", image_each_iteration=False)
         
+        data = {
+            "n_failed": cf.get_len_failed_nodes(),
+            "nodes": cf.failed_nodes
+        }
+        
         with open(f"cf_data/{cf}.csv", "a+") as f:
-            f.writelines([f"{cf.get_len_failed_nodes()}\n"]) 
+            f.writelines([f"{json.dumps(data)}\n"]) 
         end = time.perf_counter()
         print(f"took: {end-start}s")
