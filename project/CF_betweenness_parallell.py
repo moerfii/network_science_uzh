@@ -41,8 +41,31 @@ def betweenness_centrality_parallel(G, processes=None, **kwargs):
             bt_c[n] += bt[n]
     return bt_c
 
+def load_centrality_parallel(G, processes=None, **kwargs):
+    """Parallel betweenness centrality  function"""
+    p = Pool(processes=processes)
+    node_divisor = len(p._pool) * 4
+    node_chunks = list(chunks(G.nodes(), int(G.order() / node_divisor)))
+    num_chunks = len(node_chunks)
 
+    bt_sc = p.starmap(
+        nx.betweenness_centrality_subset,
+        zip(
+            [G] * num_chunks,
+            node_chunks,
+            [list(G)] * num_chunks,
+            [True] * num_chunks,
+            ["travel_time"] * num_chunks,
 
+        ),
+    )
+
+    # Reduce the partial solutions
+    bt_c = bt_sc[0]
+    for bt in bt_sc[1:]:
+        for n in bt:
+            bt_c[n] += bt[n]
+    return bt_c
 
 from abc import ABC, abstractmethod
 class AbstractStrategy:
@@ -66,7 +89,19 @@ class BetweennessStrategy(AbstractStrategy):
     
     def __str__(self):
         return f"Betweenness_k={self.kwargs['k']}_norm={int(self.kwargs['normalized'])}_weight={self.kwargs['weight']}"
-    
+
+
+class LoadCentralityStrategy(AbstractStrategy):
+    def __init__(self, k, normalized, weight):
+        super(LoadCentralityStrategy, self).__init__(k=k, normalized=normalized, weight=weight)
+
+    def get_metric(self, graph: nx.Graph):
+        return load_centrality_parallel(graph, **self.kwargs)
+
+    def __str__(self):
+        return f"Load_centrality_norm={int(self.kwargs['normalized'])}_weight={self.kwargs['weight']}"
+
+
 class PercolationStrategy(AbstractStrategy):
     def __init__(self):
         super(PercolationStrategy,self).super()
