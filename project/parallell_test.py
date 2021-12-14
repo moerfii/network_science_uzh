@@ -41,20 +41,21 @@ def betweenness_centrality_parallel(G, processes=None):
     return bt_c
 
 
-
-G = nx.read_gml("data/cleaned_manhattan.gml")
-for G in [G]:
+if __name__ == '__main__':
+    G = nx.read_gml("data/cleaned_manhattan.gml")
+    for G in [G]:
+        print("")
+        print("Computing betweenness centrality for:")
+        print(nx.info(G))
+        print("\tParallel version")
+        start = time.time()
+        #bt = betweenness_centrality_parallel(G)
+        print(f"\t\tTime: {(time.time() - start):.4F} seconds")
+        #print(f"\t\tBetweenness centrality for node 0: {bt[list(bt.keys())[0]]:.5f}")
+        print("\tNon-Parallel version")
+        start = time.time()
+        bt = nx.load_centrality(G)
+        print(f"\t\tTime: {(time.time() - start):.4F} seconds")
+        print(f"\t\tBetweenness centrality for node 0: {bt[list(bt.keys())[0]]:.5f}")
     print("")
-    print("Computing betweenness centrality for:")
-    print(nx.info(G))
-    print("\tParallel version")
-    start = time.time()
-    bt = betweenness_centrality_parallel(G)
-    print(f"\t\tTime: {(time.time() - start):.4F} seconds")
-    print(f"\t\tBetweenness centrality for node 0: {bt[list(bt.keys())[0]]:.5f}")
-    print("\tNon-Parallel version")
-    start = time.time()
-    bt = nx.betweenness_centrality(G)
-    print(f"\t\tTime: {(time.time() - start):.4F} seconds")
-    print(f"\t\tBetweenness centrality for node 0: {bt[list(bt.keys())[0]]:.5f}")
-print("")
+
