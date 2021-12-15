@@ -80,15 +80,26 @@ class AbstractStrategy:
     def __str__(self):
         pass
 
-class BetweennessStrategy(AbstractStrategy):
+class BetweennessParallelStrategy(AbstractStrategy):
     def __init__(self, k, normalized, weight):
-        super(BetweennessStrategy, self).__init__(k=k, normalized=normalized, weight=weight)
+        super(BetweennessParallelStrategy, self).__init__(k=k, normalized=normalized, weight=weight)
 
     def get_metric(self, graph: nx.Graph):
         return betweenness_centrality_parallel(graph, **self.kwargs)
     
     def __str__(self):
-        return f"Betweenness_k={self.kwargs['k']}_norm={int(self.kwargs['normalized'])}_weight={self.kwargs['weight']}"
+        return f"BetweennessParallel_k={self.kwargs['k']}_norm={int(self.kwargs['normalized'])}_weight={self.kwargs['weight']}"
+
+class BetweennessStrategy(AbstractStrategy):
+    def __init__(self, k, normalized, weight):
+        super(BetweennessStrategy, self).__init__(k=k, normalized=normalized, weight=weight)
+
+    def get_metric(self, graph: nx.Graph):
+        return nx.betweenness_centrality(graph, self.kwargs["k"], self.kwargs["normalized"], weight=self.kwargs["weight"])
+    
+    def __str__(self):
+        return f"BetweennessParallel_k={self.kwargs['k']}_norm={int(self.kwargs['normalized'])}_weight={self.kwargs['weight']}"
+
 
 
 class LoadCentralityStrategy(AbstractStrategy):
@@ -144,24 +155,29 @@ class CascadeFailure:
         self.path = path
         self.ox_path = ox_path
         self.strategy = strategy
-        self.muliplier = multiplier
+        self.multiplier = multiplier
         self.prepare_graph()
         self.failed_nodes = []
 
     def __str__(self):
-        return f"CF_max_multiplier={self.muliplier}_{self.strategy}"
+        return f"CF_max_multiplier={self.multiplier}_{self.strategy}"
 
     def prepare_graph(self):
         self.graph = nx.read_gml(self.path) 
+ 
         self.graph = self.get_largest_component(self.graph)
         #betweenness = nx.betweenness_centrality(self.graph, k=k)
         #self.graph = self.strategy.prepare_graph(self.graph)
         metric = self.strategy.get_metric(self.graph)
+        vals = np.sort(np.unique(list(metric.values())))
+
         for key in metric.keys():
             n = self.graph.nodes()[key]
             #n["is_active"] = True
             n["metric"] = metric[key]
-            n["max_metric"] = metric[key] * self.muliplier
+            n["max_metric"] = metric[key] * self.multiplier
+            if n["max_metric"] == 0:
+                n["max_metric"] = vals[1] * self.multiplier
 
 
     def get_largest_component(self,graph)->nx.Graph:
@@ -262,7 +278,7 @@ if __name__ == "__main__":
     for i in range(100):
         start=time.perf_counter()
         print(f"iteration: {i}")
-        bs = BetweennessStrategy(k=None, normalized=True, weight="travel_time")
+        bs = BetweennessParallelStrategy(k=None, normalized=True, weight="travel_time")
         cf = CascadeFailure("data/cleaned_manhattan.gml", "data/uncleaned_manhattan.graphml",strategy=bs,multiplier=4)
         cf.attack_nodes(1, removal_mode="random", image_each_iteration=False)
         
